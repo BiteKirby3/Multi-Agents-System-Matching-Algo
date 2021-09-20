@@ -46,11 +46,12 @@ func Footprint(s string) string {
 }
 
 func Anagrams(words []string) (anagrams map[string][]string) {
+	anagrams = make(map[string][]string)
 	for i := range words {
-		//verify if the current word's key already exists
-		if val, ok := anagrams[Footprint(words[i])]; ok {
+		_, ok := anagrams[Footprint(words[i])]
+		if ok {
 			//do something here
-			val = append(val, words[i])
+			anagrams[Footprint(words[i])] = append(anagrams[Footprint(words[i])], words[i])
 		} else {
 			newSlice := []string{words[i]}
 			anagrams[Footprint(words[i])] = newSlice
@@ -62,6 +63,7 @@ func Anagrams(words []string) (anagrams map[string][]string) {
 func main() {
 	dict := [...]string{"AGENT", "CHIEN", "COLOC", "ETANG", "ELLE", "GEANT", "NICHE", "RADAR"}
 	slice := dict[:]
+
 	fmt.Println(Palindromes(slice))
 	fmt.Println(Footprint("AGENT"))
 	fmt.Println(Anagrams(slice))
