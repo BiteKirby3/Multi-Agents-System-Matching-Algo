@@ -62,7 +62,7 @@ func main() {
 
 	fmt.Println("*** FOREACH RAND ***")
 
-	// petite coquetterie pour créer un fonction qui renvoie un nombre aléatoire entre 0 et 10...
+	// petite coquetterie pour créer une fonction qui renvoie un nombre aléatoire entre 0 et 10...
 	frand := func(n int) func(int) int {
 		return func(int) int {
 			return rand.Intn(n)
