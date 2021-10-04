@@ -4,12 +4,17 @@ import (
 	"fmt"
 )
 
+//fonction de service
 func PrintAg(ag Agent) {
 	fmt.Println(ag)
 }
 
 func PrintInt(i int) {
 	fmt.Println(i)
+}
+
+func removeAgent(slice []AgentID, s int) []AgentID {
+	return append(slice[:s], slice[s+1:]...)
 }
 
 func findAgentByID(ags []Agent, id AgentID) Agent {
@@ -120,7 +125,6 @@ func dynamiqueLibre(ag1 []Agent, ag2 []Agent, couple map[AgentID]AgentID) map[Ag
 		}
 		//tant qu'il n'y a pas de paire critique, on sort de la boucle
 		if !existePaireCritique {
-			fmt.Println("log : couple stable ")
 			//mettre à jour couple à partir de As et Bs
 			for i := 0; i < len(couple); i++ {
 				couple[Bs[i]] = As[i]
@@ -137,23 +141,43 @@ func GaleShapley(ag1 []Agent, ag2 []Agent) (couple map[AgentID]AgentID) {
 	if nbA != nbB {
 		panic("A et B ne sont pas de même taille !")
 	}
-	couple = make(map[AgentID]AgentID)
+	couple = make(map[AgentID]AgentID) //couple formé à retourner
+
+	//initialiser un Map qui contient tous les disposants d'un proposant qui ne lui ont pas déjà refu
+	disposantRestant := make(map[AgentID][]AgentID)
 	//initialiser deux Maps [Agent]bool indiquant si l'agent a ou b est apparié ou pas
 	apparieA := make(map[AgentID]bool)
 	for _, a := range ag1 {
 		apparieA[a.ID] = false
+		disposantRestant[a.ID] = a.Prefs
 	}
 	apparieB := make(map[AgentID]bool)
 	for _, b := range ag2 {
 		apparieB[b.ID] = false
 	}
-	nonApparie, hommeCelibataire := nonApparie(apparieA)
-	rejet := make(map[AgentID][]AgentID)
-	for nonApparie {
-
-		nonApparie, hommeCelibataire = nonApparie(apparieA)
+	nonAppa, hommeCelibataire := nonApparie(apparieA)
+	//tant que'il y a d'homme célibataire non apparié
+	for nonAppa {
+		//b = femme préférée de l'hommeCelibataire parmi celles à qui il ne s'est pas déjà proposé
+		b := disposantRestant[hommeCelibataire][0]
+		disposantRestant[hommeCelibataire] = removeAgent(disposantRestant[hommeCelibataire], 0) //retirer b dans la liste de disposant restant de l'hommeCelibataire
+		//si b est célibataire, hommeCelibataire et b forment un couple
+		if !apparieB[b] {
+			couple[b] = hommeCelibataire
+			apparieB[b] = true
+			apparieA[hommeCelibataire] = true
+		} else { //sinon un couple(a', b) existe
+			bPrefHommeCeli, _ := findAgentByID(ag2, b).Prefers(findAgentByID(ag1, hommeCelibataire), findAgentByID(ag1, couple[b])) //si b préfère hommecelibataire à a'
+			if bPrefHommeCeli {
+				//b et hommeCelibataire forment un nouveau couple, hommeCelibataire devient apparié, a' devient non apparié
+				apparieA[hommeCelibataire] = true
+				apparieA[couple[b]] = false
+				couple[b] = hommeCelibataire
+			}
+		}
+		nonAppa, hommeCelibataire = nonApparie(apparieA)
 	}
-	return
+	return couple
 }
 
 func main() {
@@ -225,5 +249,9 @@ func main() {
 	fmt.Println(coupleInstable)
 	fmt.Println("*** DL - Dynamique Libre ***")
 	fmt.Println(dynamiqueLibre(poolA, poolB, coupleInstable))
+	fmt.Println(dynamiqueLibre(poolA, poolB, dynamiqueLibre(poolA, poolB, coupleInstable)))
+	fmt.Println("*** AD - Acceptation Différée (a.k.a. Gale & Shapley, 1962) ***")
+	fmt.Println(GaleShapley(poolA, poolB))
+	fmt.Println(dynamiqueLibre(poolA, poolB, GaleShapley(poolA, poolB)))
 
 }
