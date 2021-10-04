@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"time"
 )
 
 type AgentID string
@@ -77,7 +76,6 @@ func (ag Agent) Prefers(a, b Agent) (bool, error) {
 func RandomPrefs(ids []AgentID) (res []AgentID) {
 	res = make([]AgentID, len(ids))
 	copy(res, ids)
-	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(res), func(i, j int) { res[i], res[j] = res[j], res[i] })
 	return
 }
