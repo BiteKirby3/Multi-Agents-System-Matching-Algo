@@ -112,6 +112,7 @@ func dynamiqueLibre(ag1 []Agent, ag2 []Agent, couple map[AgentID]AgentID) map[Ag
 			for i := 0; i < len(couple); i++ {
 				//tant qu'il existe paire critique, on échange leur partenaire
 				if paireCritique(findAgentByID(ag1, As[j]), findAgentByID(ag2, Bs[j]), findAgentByID(ag1, As[i]), findAgentByID(ag2, Bs[i])) {
+					fmt.Println(As[i], " échange avec ", As[j])
 					temp := As[i]
 					As[i] = As[j]
 					As[j] = temp
@@ -193,6 +194,8 @@ func main() {
 		"Léon",
 		"Louis",
 		"Pierre",
+		"Victor",
+		"Antoine",
 	}
 	Bnames := [...]string{
 		"Nathalie",
@@ -206,6 +209,8 @@ func main() {
 		"Sophie",
 		"Nina",
 		"Jeanne",
+		"Lisa",
+		"Anne",
 	}
 
 	poolA := make([]Agent, 0, len(Anames))
@@ -249,9 +254,6 @@ func main() {
 	fmt.Println(coupleInstable)
 	fmt.Println("*** DL - Dynamique Libre ***")
 	fmt.Println(dynamiqueLibre(poolA, poolB, coupleInstable))
-	fmt.Println(dynamiqueLibre(poolA, poolB, dynamiqueLibre(poolA, poolB, coupleInstable)))
 	fmt.Println("*** AD - Acceptation Différée (a.k.a. Gale & Shapley, 1962) ***")
 	fmt.Println(GaleShapley(poolA, poolB))
-	fmt.Println(dynamiqueLibre(poolA, poolB, GaleShapley(poolA, poolB)))
-
 }
