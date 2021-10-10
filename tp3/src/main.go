@@ -13,10 +13,6 @@ func PrintInt(i int) {
 	fmt.Println(i)
 }
 
-func removeAgent(slice []AgentID, s int) []AgentID {
-	return append(slice[:s], slice[s+1:]...)
-}
-
 func findAgentByID(ags []Agent, id AgentID) Agent {
 	var ag Agent
 	for _, a := range ags {
@@ -40,6 +36,25 @@ func nonApparie(appaA map[AgentID]bool) (bool, AgentID) {
 		}
 	}
 	return false, ""
+}
+
+//Vérifier si un cycle peut être construit après avoir ajouté un nouvel agent dans la liste
+func identifyCycle(listeAgent []Agent, newAg Agent) (bool, []Agent) {
+	nbA := len(listeAgent)
+	existeCycle := false
+	//listeAgent est de la forme [a1,b1,a2,b2,a3,b3,a4......], on va donc vérifier si newAg=listeAgent[i] avec i un nombre pair
+	var i int
+	for i = 0; i < nbA; i = i + 2 {
+		if Equal(newAg, listeAgent[i]) {
+			existeCycle = true
+			break
+		}
+	}
+	if existeCycle {
+		return true, listeAgent[i:] //retourner le sous-slice qui contient le cycle complet
+	} else {
+		return false, nil
+	}
 }
 
 func Boston(ag1 []Agent, ag2 []Agent) (couple map[AgentID]AgentID) {
@@ -157,11 +172,12 @@ func GaleShapley(ag1 []Agent, ag2 []Agent) (couple map[AgentID]AgentID) {
 		apparieB[b.ID] = false
 	}
 	nonAppa, hommeCelibataire := nonApparie(apparieA)
+
 	//tant que'il y a d'homme célibataire non apparié
 	for nonAppa {
 		//b = femme préférée de l'hommeCelibataire parmi celles à qui il ne s'est pas déjà proposé
 		b := disposantRestant[hommeCelibataire][0]
-		disposantRestant[hommeCelibataire] = removeAgent(disposantRestant[hommeCelibataire], 0) //retirer b dans la liste de disposant restant de l'hommeCelibataire
+		disposantRestant[hommeCelibataire] = disposantRestant[hommeCelibataire][1:] //retirer b dans la liste de disposant restant de l'hommeCelibataire
 		//si b est célibataire, hommeCelibataire et b forment un couple
 		if !apparieB[b] {
 			couple[b] = hommeCelibataire
@@ -174,6 +190,67 @@ func GaleShapley(ag1 []Agent, ag2 []Agent) (couple map[AgentID]AgentID) {
 				apparieA[hommeCelibataire] = true
 				apparieA[couple[b]] = false
 				couple[b] = hommeCelibataire
+			}
+		}
+		nonAppa, hommeCelibataire = nonApparie(apparieA)
+	}
+	return couple
+}
+
+func TopTradingCycles(ag1 []Agent, ag2 []Agent) (couple map[AgentID]AgentID) {
+	nbA := len(ag1)
+	nbB := len(ag2)
+	if nbA != nbB {
+		panic("A et B ne sont pas de même taille !")
+	}
+	couple = make(map[AgentID]AgentID) //couple formé à retourner
+	//initialiser deux Maps [Agent]bool indiquant si l'agent a ou b est apparié ou pas
+	apparieA := make(map[AgentID]bool)
+	for _, a := range ag1 {
+		apparieA[a.ID] = false
+	}
+	apparieB := make(map[AgentID]bool)
+	for _, b := range ag2 {
+		apparieB[b.ID] = false
+	}
+	nonAppa, hommeCelibataire := nonApparie(apparieA)
+	//tant qu'il reste des agents non appariés
+	for nonAppa {
+		listeAgent := make([]Agent, 0)
+		var cycle []Agent
+		existeCycle := false
+		//tant que l'on n'a pas encore construit de cycle
+		for !existeCycle {
+			var bPrefere Agent
+			for _, bID := range findAgentByID(ag1, hommeCelibataire).Prefs {
+				if !apparieB[bID] {
+					bPrefere = findAgentByID(ag2, bID)
+					break
+				}
+			}
+			//listeAgent est de la forme [a1,b1,a2,b2....]
+			listeAgent = append(listeAgent, findAgentByID(ag1, hommeCelibataire))
+			listeAgent = append(listeAgent, bPrefere)
+			var aPrefereDeB Agent
+			//agent du groupe B qui a reçu une offre pointe vers son agent libre préféré du groupe A
+			for _, aID := range bPrefere.Prefs {
+				if !apparieA[aID] {
+					aPrefereDeB = findAgentByID(ag1, aID)
+					break
+				}
+			}
+			existeCycle, cycle = identifyCycle(listeAgent, aPrefereDeB)
+			//si le cycle est bien construit => apparier chaque agent du cycle avec l'agent qu'il pointe
+			if existeCycle {
+				nbC := len(cycle)
+				var i int
+				for i = 0; i < nbC; i = i + 2 {
+					apparieA[cycle[i].ID] = true
+					apparieB[cycle[i+1].ID] = true
+					couple[cycle[i+1].ID] = cycle[i].ID
+				}
+			} else { //sinon l'ajouter dans listeAgent puis continuer à construire le cycle
+				hommeCelibataire = aPrefereDeB.ID
 			}
 		}
 		nonAppa, hommeCelibataire = nonApparie(apparieA)
@@ -255,5 +332,11 @@ func main() {
 	fmt.Println("*** DL - Dynamique Libre ***")
 	fmt.Println(dynamiqueLibre(poolA, poolB, coupleInstable))
 	fmt.Println("*** AD - Acceptation Différée (a.k.a. Gale & Shapley, 1962) ***")
-	fmt.Println(GaleShapley(poolA, poolB))
+	coupleStable := GaleShapley(poolA, poolB)
+	fmt.Println(coupleStable)
+	fmt.Println(dynamiqueLibre(poolA, poolB, coupleStable))
+	fmt.Println("*** Top Trading Cycles ***")
+	coupleInstableParTTC := TopTradingCycles(poolA, poolB)
+	fmt.Println(coupleInstableParTTC)
+	fmt.Println(dynamiqueLibre(poolA, poolB, coupleInstableParTTC))
 }
